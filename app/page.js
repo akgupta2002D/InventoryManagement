@@ -1,53 +1,243 @@
 'use client'
-import Image from 'next/image'
-import { useState, useEffect } from 'react'
-import { firestore } from '@/firebase'
-import { Box, Typography } from '@mui/material'
-import { query, getDocs, collection } from 'firebase/firestore'
 
+// Import necessary dependencies
+import Image from 'next/image' // Next.js Image component for optimized image loading
+import { useState, useEffect } from 'react' // React hooks for state management and side effects
+import { firestore } from '@/firebase' // Firebase firestore instance
+import { Box, Stack, Typography, Button, Modal, TextField } from '@mui/material' // Material-UI components
+import {
+  collection,
+  doc,
+  getDocs,
+  query,
+  setDoc,
+  deleteDoc,
+  getDoc
+} from 'firebase/firestore' // Firestore functions for database operations
+
+// ===== STYLES =====
+
+// Modal style configuration
+// This object defines the styling for the "Add Item" modal
+const style = {
+  position: 'absolute',
+  top: '50%',
+  left: '50%',
+  transform: 'translate(-50%, -50%)', // Centers the modal on the screen
+  width: 400,
+  bgcolor: 'white',
+  border: '2px solid #000',
+  boxShadow: 24,
+  p: 4,
+  display: 'flex',
+  flexDirection: 'column',
+  gap: 3
+}
+
+// ===== MAIN COMPONENT =====
+
+/**
+ * Home component for inventory management
+ * This component handles the display and management of inventory items
+ */
 export default function Home () {
+  // ===== STATE HOOKS =====
+
+  // State to store the list of inventory items
   const [inventory, setInventory] = useState([])
+
+  // State to control the visibility of the "Add Item" modal
   const [open, setOpen] = useState(false)
+
+  // State to store the name of the new item being added
   const [itemName, setItemName] = useState('')
 
+  // ===== FIREBASE OPERATIONS =====
+
+  /**
+   * Fetches the current inventory from Firestore and updates the state
+   * This function is called on component mount and after any inventory changes
+   */
   const updateInventory = async () => {
+    // Create a query to get all documents from the 'inventory' collection
     const snapshot = query(collection(firestore, 'inventory'))
+
+    // Fetch the documents
     const docs = await getDocs(snapshot)
+
     const inventoryList = []
+
+    // Iterate through the documents and create an array of inventory items
     docs.forEach(doc => {
-      inventoryList.push({
-        name: doc.id,
-        ...doc.data()
-      })
+      inventoryList.push({ name: doc.id, ...doc.data() })
     })
 
+    // Update the inventory state with the fetched data
     setInventory(inventoryList)
-    console.log(inventoryList)
   }
 
-  const removeItem = async item => {
+  /**
+   * Adds a new item to the inventory or increments its quantity if it already exists
+   * @param {string} item - The name of the item to add
+   */
+  const addItem = async item => {
+    // Reference to the document in Firestore
     const docRef = doc(collection(firestore, 'inventory'), item)
+
+    // Check if the item already exists
+    const docSnap = await getDoc(docRef)
+
+    if (docSnap.exists()) {
+      // If the item exists, increment its quantity
+      const { quantity } = docSnap.data()
+      await setDoc(docRef, { quantity: quantity + 1 })
+    } else {
+      // If the item doesn't exist, create a new document with quantity 1
+      await setDoc(docRef, { quantity: 1 })
+    }
+
+    // Update the inventory state to reflect the changes
+    await updateInventory()
+  }
+
+  /**
+   * Removes an item from the inventory or decrements its quantity
+   * @param {string} item - The name of the item to remove
+   */
+  const removeItem = async item => {
+    // Reference to the document in Firestore
+    const docRef = doc(collection(firestore, 'inventory'), item)
+
+    // Check if the item exists
     const docSnap = await getDoc(docRef)
 
     if (docSnap.exists()) {
       const { quantity } = docSnap.data()
+      if (quantity === 1) {
+        // If the quantity is 1, remove the item completely
+        await deleteDoc(docRef)
+      } else {
+        // If the quantity is more than 1, decrement it
+        await setDoc(docRef, { quantity: quantity - 1 })
+      }
     }
+
+    // Update the inventory state to reflect the changes
+    await updateInventory()
   }
+
+  // ===== EFFECTS =====
+
+  // Fetch inventory data on component mount
   useEffect(() => {
     updateInventory()
-  }, [])
+  }, []) // Empty dependency array ensures this effect runs only once on mount
+
+  // ===== EVENT HANDLERS =====
+
+  // Handler to open the "Add Item" modal
+  const handleOpen = () => setOpen(true)
+
+  // Handler to close the "Add Item" modal
+  const handleClose = () => setOpen(false)
+
+  // ===== RENDER =====
 
   return (
-    <Box>
-      <Typography variant='h1'>Inventory Management</Typography>
-      {inventory.forEach(item => {
-        return (
-          <Box>
-            {item.name}
-            {item.count}
-          </Box>
-        )
-      })}
+    <Box
+      width='100vw'
+      height='100vh'
+      display={'flex'}
+      justifyContent={'center'}
+      flexDirection={'column'}
+      alignItems={'center'}
+      gap={2}
+    >
+      {/* Modal for adding new items */}
+      <Modal
+        open={open}
+        onClose={handleClose}
+        aria-labelledby='modal-modal-title'
+        aria-describedby='modal-modal-description'
+      >
+        <Box sx={style}>
+          <Typography id='modal-modal-title' variant='h6' component='h2'>
+            Add Item
+          </Typography>
+          <Stack width='100%' direction={'row'} spacing={2}>
+            <TextField
+              id='outlined-basic'
+              label='Item'
+              variant='outlined'
+              fullWidth
+              value={itemName}
+              onChange={e => setItemName(e.target.value)} // Update itemName state on input change
+            />
+            <Button
+              variant='outlined'
+              onClick={() => {
+                addItem(itemName) // Add the new item to the inventory
+                setItemName('') // Clear the input field
+                handleClose() // Close the modal
+              }}
+            >
+              Add
+            </Button>
+          </Stack>
+        </Box>
+      </Modal>
+
+      {/* Button to open the "Add New Item" modal */}
+      <Button variant='contained' onClick={handleOpen}>
+        Add New Item
+      </Button>
+
+      {/* Main inventory display */}
+      <Box border={'1px solid #333'}>
+        {/* Header */}
+        <Box
+          width='800px'
+          height='100px'
+          bgcolor={'#ADD8E6'}
+          display={'flex'}
+          justifyContent={'center'}
+          alignItems={'center'}
+        >
+          <Typography variant={'h2'} color={'#333'} textAlign={'center'}>
+            Inventory Items
+          </Typography>
+        </Box>
+
+        {/* List of inventory items */}
+        <Stack width='800px' height='300px' spacing={2} overflow={'auto'}>
+          {/* Map through the inventory array and render each item */}
+          {inventory.map(({ name, quantity }) => (
+            <Box
+              key={name}
+              width='100%'
+              minHeight='150px'
+              display={'flex'}
+              justifyContent={'space-between'}
+              alignItems={'center'}
+              bgcolor={'#f0f0f0'}
+              paddingX={5}
+            >
+              {/* Display the item name with first letter capitalized */}
+              <Typography variant={'h3'} color={'#333'} textAlign={'center'}>
+                {name.charAt(0).toUpperCase() + name.slice(1)}
+              </Typography>
+              {/* Display the item quantity */}
+              <Typography variant={'h3'} color={'#333'} textAlign={'center'}>
+                Quantity: {quantity}
+              </Typography>
+              {/* Button to remove one unit of the item */}
+              <Button variant='contained' onClick={() => removeItem(name)}>
+                Remove
+              </Button>
+            </Box>
+          ))}
+        </Stack>
+      </Box>
     </Box>
   )
 }
