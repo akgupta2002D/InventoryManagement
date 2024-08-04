@@ -18,7 +18,13 @@ import {
   Grid,
   Paper
 } from '@mui/material'
-import { Search, Add, Remove, CloudUpload } from '@mui/icons-material'
+import {
+  Search,
+  Add,
+  Remove,
+  CloudUpload,
+  BluetoothConnectedOutlined
+} from '@mui/icons-material'
 import {
   collection,
   doc,
@@ -129,11 +135,37 @@ export default function Home () {
 
   return (
     <Box sx={{ p: 3, maxWidth: 1200, margin: 'auto' }}>
-      <Typography variant='h3' gutterBottom>
+      <Typography
+        variant='h4'
+        gutterBottom
+        sx={{
+          backgroundColor: '#1976d2',
+          borderRadius: '20px',
+          color: 'white',
+          p: 3
+        }}
+      >
         Inventory Management Dashboard
       </Typography>
 
       <Grid container spacing={3}>
+        <Grid item xs={12} md={4}>
+          <Paper elevation={3} sx={{ p: 2, height: '50%' }}>
+            <Typography variant='h5' gutterBottom>
+              Inventory Distribution
+            </Typography>
+            <ResponsiveContainer width='100%' height={300}>
+              <LineChart data={chartData}>
+                <CartesianGrid strokeDasharray='3 3' />
+                <XAxis dataKey='name' />
+                <YAxis />
+                <Tooltip />
+                <Legend />
+                <Line type='monotone' dataKey='quantity' stroke='#8884d8' />
+              </LineChart>
+            </ResponsiveContainer>
+          </Paper>
+        </Grid>
         <Grid item xs={12} md={8}>
           <Paper elevation={3} sx={{ p: 2, mb: 3 }}>
             <Typography variant='h5' gutterBottom>
@@ -204,23 +236,6 @@ export default function Home () {
                 </Card>
               ))}
             </Stack>
-          </Paper>
-        </Grid>
-        <Grid item xs={12} md={4}>
-          <Paper elevation={3} sx={{ p: 2, height: '50%' }}>
-            <Typography variant='h5' gutterBottom>
-              Inventory Distribution
-            </Typography>
-            <ResponsiveContainer width='100%' height={300}>
-              <LineChart data={chartData}>
-                <CartesianGrid strokeDasharray='3 3' />
-                <XAxis dataKey='name' />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Line type='monotone' dataKey='quantity' stroke='#8884d8' />
-              </LineChart>
-            </ResponsiveContainer>
           </Paper>
         </Grid>
       </Grid>
