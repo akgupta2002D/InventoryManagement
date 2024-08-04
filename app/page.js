@@ -1,5 +1,6 @@
 'use client'
 
+// Import necessary dependencies
 import Image from 'next/image'
 import { useState, useEffect } from 'react'
 import { firestore } from '@/firebase'
@@ -23,7 +24,7 @@ import {
   Add,
   Remove,
   CloudUpload,
-  BluetoothConnectedOutlined
+  BluetoothConnectedOutlined // Note: This icon is imported but not used in the component
 } from '@mui/icons-material'
 import {
   collection,
@@ -45,6 +46,7 @@ import {
   ResponsiveContainer
 } from 'recharts'
 
+// Style configuration for the modal
 const style = {
   position: 'absolute',
   top: '50%',
@@ -58,12 +60,14 @@ const style = {
 }
 
 export default function Home () {
-  const [inventory, setInventory] = useState([])
-  const [open, setOpen] = useState(false)
-  const [itemName, setItemName] = useState('')
-  const [itemImage, setItemImage] = useState(null)
-  const [searchTerm, setSearchTerm] = useState('')
+  // State management using hooks
+  const [inventory, setInventory] = useState([]) // Stores the list of inventory items
+  const [open, setOpen] = useState(false) // Controls the visibility of the "Add Item" modal
+  const [itemName, setItemName] = useState('') // Stores the name of the new item being added
+  const [itemImage, setItemImage] = useState(null) // Stores the image of the new item being added
+  const [searchTerm, setSearchTerm] = useState('') // Stores the current search term for filtering inventory
 
+  // Function to fetch and update the inventory from Firestore
   const updateInventory = async () => {
     const snapshot = query(collection(firestore, 'inventory'))
     const docs = await getDocs(snapshot)
@@ -71,14 +75,17 @@ export default function Home () {
     setInventory(inventoryList)
   }
 
+  // Function to add a new item to the inventory
   const addItem = async () => {
     const docRef = doc(collection(firestore, 'inventory'), itemName)
     const docSnap = await getDoc(docRef)
 
     if (docSnap.exists()) {
+      // If the item exists, increment its quantity
       const { quantity } = docSnap.data()
       await setDoc(docRef, { quantity: quantity + 1, image: itemImage })
     } else {
+      // If the item doesn't exist, create a new document with quantity 1
       await setDoc(docRef, { quantity: 1, image: itemImage })
     }
 
@@ -86,6 +93,7 @@ export default function Home () {
     handleClose()
   }
 
+  // Function to remove an item from the inventory
   const removeItem = async item => {
     const docRef = doc(collection(firestore, 'inventory'), item)
     const docSnap = await getDoc(docRef)
@@ -93,8 +101,10 @@ export default function Home () {
     if (docSnap.exists()) {
       const { quantity } = docSnap.data()
       if (quantity === 1) {
+        // If quantity is 1, remove the item completely
         await deleteDoc(docRef)
       } else {
+        // If quantity is more than 1, decrement it
         await setDoc(docRef, { ...docSnap.data(), quantity: quantity - 1 })
       }
     }
@@ -102,10 +112,12 @@ export default function Home () {
     await updateInventory()
   }
 
+  // Effect hook to fetch inventory data when the component mounts
   useEffect(() => {
     updateInventory()
   }, [])
 
+  // Handler functions for the modal
   const handleOpen = () => setOpen(true)
   const handleClose = () => {
     setOpen(false)
@@ -113,6 +125,7 @@ export default function Home () {
     setItemImage(null)
   }
 
+  // Function to handle image upload
   const handleImageUpload = e => {
     const file = e.target.files[0]
     const reader = new FileReader()
@@ -124,10 +137,12 @@ export default function Home () {
     }
   }
 
+  // Filter inventory based on search term
   const filteredInventory = inventory.filter(item =>
     item.id.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
+  // Prepare data for the chart
   const chartData = inventory.map(item => ({
     name: item.id,
     quantity: item.quantity
@@ -135,6 +150,7 @@ export default function Home () {
 
   return (
     <Box sx={{ p: 3, maxWidth: 1200, margin: 'auto' }}>
+      {/* Dashboard Title */}
       <Typography
         variant='h4'
         gutterBottom
@@ -149,6 +165,7 @@ export default function Home () {
       </Typography>
 
       <Grid container spacing={3}>
+        {/* Chart Section */}
         <Grid item xs={12} md={4}>
           <Paper elevation={3} sx={{ p: 2, height: '50%' }}>
             <Typography variant='h5' gutterBottom>
@@ -166,11 +183,13 @@ export default function Home () {
             </ResponsiveContainer>
           </Paper>
         </Grid>
+        {/* Inventory List Section */}
         <Grid item xs={12} md={8}>
           <Paper elevation={3} sx={{ p: 2, mb: 3 }}>
             <Typography variant='h5' gutterBottom>
               Inventory Overview
             </Typography>
+            {/* Search Input */}
             <TextField
               fullWidth
               variant='outlined'
@@ -186,6 +205,7 @@ export default function Home () {
               }}
               sx={{ mb: 2 }}
             />
+            {/* Add New Item Button */}
             <Button
               variant='contained'
               startIcon={<Add />}
@@ -194,6 +214,7 @@ export default function Home () {
             >
               Add New Item
             </Button>
+            {/* Inventory Items List */}
             <Stack spacing={2}>
               {filteredInventory.map(({ id, quantity, image }) => (
                 <Card key={id}>
@@ -204,6 +225,7 @@ export default function Home () {
                       justifyContent: 'space-between'
                     }}
                   >
+                    {/* Item Image */}
                     {image && (
                       <Box
                         sx={{
@@ -221,10 +243,13 @@ export default function Home () {
                         />
                       </Box>
                     )}
+                    {/* Item Name */}
                     <Typography variant='h6'>{id}</Typography>
+                    {/* Item Quantity */}
                     <Typography variant='subtitle1'>
                       Quantity: {quantity}
                     </Typography>
+                    {/* Remove Item Button */}
                     <Button
                       variant='outlined'
                       startIcon={<Remove />}
@@ -240,6 +265,7 @@ export default function Home () {
         </Grid>
       </Grid>
 
+      {/* Add New Item Modal */}
       <Modal
         open={open}
         onClose={handleClose}
@@ -255,6 +281,7 @@ export default function Home () {
           >
             Add New Item
           </Typography>
+          {/* Item Name Input */}
           <TextField
             fullWidth
             label='Item Name'
@@ -263,6 +290,7 @@ export default function Home () {
             onChange={e => setItemName(e.target.value)}
             sx={{ mb: 2 }}
           />
+          {/* Image Upload Input */}
           <input
             accept='image/*'
             style={{ display: 'none' }}
@@ -281,6 +309,7 @@ export default function Home () {
               Upload Image
             </Button>
           </label>
+          {/* Image Preview */}
           {itemImage && (
             <Box
               sx={{ mb: 2, position: 'relative', width: '100%', height: 200 }}
@@ -293,6 +322,7 @@ export default function Home () {
               />
             </Box>
           )}
+          {/* Add Item Button */}
           <Button variant='contained' onClick={addItem} fullWidth>
             Add Item
           </Button>
